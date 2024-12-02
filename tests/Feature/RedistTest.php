@@ -76,4 +76,89 @@ class RedistTest extends TestCase
         $response = Redis::zrange("names",0,-1);
         self::assertEquals(["yadi","asep","mul"],$response);
     }
+
+
+    public function testHash()
+    {
+        Redis::del("user:1");
+        Redis::hset("user:1","name","yadi");
+        Redis::hset("user:1","email","yadi@com");
+        Redis::hset("user:1","age",24);
+        $response = Redis::hgetall("user:1");
+
+        self::assertEquals($response,
+    [
+        "name"=>"yadi",
+        "email"=>"yadi@com",
+        "age"=>24
+    ]);
+    }
+
+    public function testGeoInt()
+    {
+        Redis::del("sellers");
+        Redis::geoadd("sellers",106.631905,-6.179860, "Toko A");
+        Redis::geoadd("sellers",106.632498,-6.182975, "Toko B");
+
+        //untuk mendapatkan jarak antara toko a dan toko dalam km
+        $response = Redis::geodist("sellers","Toko A","Toko B","km");
+        self::assertEquals(0,$response); //hasil belum diketahui karena tidak didukung redis v3 keabawah
+        
+        //untuk mencari jarak terdekat dari radius 5 km /fromlonlat adalah .point radius
+        $result = Redis::geosearch("seller",new FromLonLat(106.633358,-6.181988), new byRadius(5,"km"));
+    }
+
+    public function testHyperLoglog()
+    {
+        Redis::pfadd("visitors","asep",'mul','yadi');
+        Redis::pfadd("visitors","asep",'mul','dew');
+        Redis::pfadd("visitors","asep",'mul','nov');
+
+        $response = Redis::pfcount("visitors");
+        self::assertEquals(5,$response);
+    }
+
+    public function testPipeline()
+    {
+        Redis::pipeline(function($pipeline)
+        {
+            $pipeline->setex("name",2,"yadi");
+            $pipeline->setex("city",2,"england");
+        });
+
+        $response = Redis::get("name");
+        self::assertEquals("yadi",$response);
+
+        $response2 = Redis::get("city");
+        self::assertEquals("england",$response2);
+
+    }
+
+    public function testTransaction()
+    {
+        Redis::transaction(function($transaction)
+        {
+            $transaction->setex("name",2,"eko");
+            $transaction->setex("city",2,"papua");
+        });
+
+        $response = Redis::get("name");
+        self::assertEquals("eko",$response);
+
+        $response2 = Redis::get("city");
+        self::assertEquals("papua",$response2);
+
+    }
+
+    public function testPublish()
+    {
+        for($i = 0 ; $i < 10; $i++)
+        {
+            Redis::publish("channel-1","hello world $i");
+            Redis::publish("channel-2","Good world $i");
+        }
+        self::assertTrue(true);
+    }
+
+
 }

@@ -35,4 +35,8 @@ Route::get("user/test",function()
     return view("contact",['contacts'=>$contacts]);
 })->middleware(['auth']);
 
+
+Route::get("session/new",[App\Http\Controllers\SessionController::class,'set']);
+Route::get("session/get",[App\Http\Controllers\SessionController::class,'get']);
+
 require __DIR__.'/auth.php';
